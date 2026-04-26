@@ -1,16 +1,19 @@
 from flask import Flask
-from app.routes.recipe import recipe_bp
+from app.routes import register_blueprints
 
 def create_app():
-    # 指定 template 與 static 的存放路徑，確保與專案結構相符
-    app = Flask(__name__, template_folder='app/templates', static_folder='app/static')
+    """
+    應用程式工廠模式 (Application Factory)。
+    初始化 Flask 應用程式並註冊所有 Blueprints。
+    """
+    app = Flask(__name__)
+    app.secret_key = 'super-secret-key-for-development'
     
-    # 註冊 Blueprints
-    app.register_blueprint(recipe_bp)
+    # 註冊路由 Blueprints
+    register_blueprints(app)
     
     return app
 
-app = create_app()
-
 if __name__ == '__main__':
-    app.run(debug=True)
+    app = create_app()
+    app.run(debug=True, port=5000)
