@@ -1,73 +1,102 @@
-import sqlite3
-import os
-from contextlib import contextmanager
+from app.database import get_db_connection
+import datetime
 
-# 取得資料庫檔案存放的目錄 instance/ (位於專案根目錄)
-DB_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'instance')
-DB_PATH = os.path.join(DB_DIR, 'database.db')
-
-@contextmanager
-def get_db_connection():
-    # 若目錄不存在則建立一個
-    os.makedirs(DB_DIR, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    # 將回傳結果設為 dict-like 的 Row 物件
-    conn.row_factory = sqlite3.Row
-    try:
-        yield conn
-    finally:
-        conn.commit()
-        conn.close()
-
-class Recipe:
+class RecipeModel:
     @staticmethod
     def create(data):
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO recipes (title, description, ingredients, steps)
-                VALUES (?, ?, ?, ?)
-            ''', (data['title'], data.get('description', ''), data['ingredients'], data['steps']))
-            return cursor.lastrowid
-            
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        query = """
+            INSERT INTO recipes (
+                title, ingredients, instructions, image_url, 
+                source_url, notes, category_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """
+        values = (
+            data.get('title'),
+            data.get('ingredients'),
+            data.get('instructions'),
+            data.get('image_url'),
+            data.get('source_url'),
+            data.get('notes'),
+            data.get('category_id')
+        )
+        cursor.execute(query, values)
+        conn.commit()
+        recipe_id = cursor.lastrowid
+        conn.close()
+        return recipe_id
+
     @staticmethod
-    def get_all(query=None):
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            if query:
-                # 簡單支援對 title 或 ingredients 的 LIKE 搜尋 (搜尋推薦食譜)
-                search_term = f"%{query}%"
-                cursor.execute('''
-                    SELECT * FROM recipes 
-                    WHERE title LIKE ? OR ingredients LIKE ? 
-                    ORDER BY created_at DESC
-                ''', (search_term, search_term))
-            else:
-                cursor.execute('SELECT * FROM recipes ORDER BY created_at DESC')
-            return [dict(row) for row in cursor.fetchall()]
+    def get_all(search_query=None, category_id=None):
+        conn = get_db_connection()
+        query = "SELECT * FROM recipes WHERE 1=1"
+        params = []
+        
+        if search_query:
+            query += " AND (title LIKE ? OR ingredients LIKE ?)"
+            params.extend([f"%{search_query}%", f"%{search_query}%"])
             
+        if category_id:
+            query += " AND category_id = ?"
+            params.append(category_id)
+            
+        query += " ORDER BY created_at DESC"
+        
+        recipes = conn.execute(query, tuple(params)).fetchall()
+        conn.close()
+        return [dict(r) for r in recipes]
+
     @staticmethod
     def get_by_id(recipe_id):
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT * FROM recipes WHERE id = ?', (recipe_id,))
-            row = cursor.fetchone()
-            return dict(row) if row else None
-            
+        conn = get_db_connection()
+        query = """
+            SELECT r.*, c.name as category_name 
+            FROM recipes r 
+            LEFT JOIN categories c ON r.category_id = c.id 
+            WHERE r.id = ?
+        """
+        recipe = conn.execute(query, (recipe_id,)).fetchone()
+        conn.close()
+        return dict(recipe) if recipe else None
+
     @staticmethod
     def update(recipe_id, data):
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                UPDATE recipes
-                SET title = ?, description = ?, ingredients = ?, steps = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-            ''', (data['title'], data.get('description', ''), data['ingredients'], data['steps'], recipe_id))
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        query = """
+            UPDATE recipes 
+            SET title = ?, ingredients = ?, instructions = ?, 
+                image_url = ?, source_url = ?, notes = ?, 
+                category_id = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """
+        values = (
+            data.get('title'),
+            data.get('ingredients'),
+            data.get('instructions'),
+            data.get('image_url'),
+            data.get('source_url'),
+            data.get('notes'),
+            data.get('category_id'),
+            recipe_id
+        )
+        conn.execute(query, values)
+        conn.commit()
+        conn.close()
+        return True
 
     @staticmethod
     def delete(recipe_id):
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute('DELETE FROM recipes WHERE id = ?', (recipe_id,))
-            return cursor.rowcount > 0
+        conn = get_db_connection()
+        conn.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
+        conn.commit()
+        conn.close()
+        return True
+
+    @staticmethod
+    def get_random():
+        conn = get_db_connection()
+        query = "SELECT id FROM recipes ORDER BY RANDOM() LIMIT 1"
+        recipe = conn.execute(query).fetchone()
+        conn.close()
+        return dict(recipe) if recipe else None
