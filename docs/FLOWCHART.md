@@ -1,79 +1,78 @@
-# 流程圖設計文件：食譜管理系統
+# 食譜收藏系統 - 流程圖與資料流設計 (Flowchart)
 
-本文件根據產品需求文件 (PRD) 與系統架構文件，視覺化使用者在食譜管理系統中的操作流程、系統背後的處理步驟，以及功能與路由的對照表。
+本文件基於 PRD（產品需求文件）與 Architecture（系統架構），視覺化使用者的操作路徑與系統內部的資料處理流程。
 
 ## 1. 使用者流程圖（User Flow）
 
-以下流程圖說明當使用者開啟網頁後，可以執行的各項功能及頁面轉換路徑：
+此流程圖描述使用者從進入網站（首頁）開始，如何操作各項主要功能（搜尋、新增、分類、隨機推薦、查看詳細與編輯筆記等）。
 
 ```mermaid
 flowchart LR
     A([使用者開啟網站]) --> B[首頁 - 食譜列表]
     
-    B --> C{選擇欲執行的功能}
+    B --> C{選擇操作}
     
-    %% 新增食譜路線
-    C -->|點擊「新增食譜」| D[填寫新增表單頁面]
-    D -->|送出表單| B
+    C -->|搜尋/查詢| D[輸入關鍵字搜尋]
+    D --> B
     
-    %% 搜尋/篩選路線
-    C -->|輸入「關鍵字 / 食材」| E[呈現篩選後的列表]
-    E --> C
+    C -->|切換分類| E[點擊特定分類標籤]
+    E --> B
     
-    %% 查看與編輯/刪除路線
-    C -->|點擊某個「食譜項目」| F[食譜明細頁面]
-    F --> G{在明細頁中選擇操作}
+    C -->|不知道吃什麼| F[點擊「隨機推薦」]
+    F --> G[進入隨機食譜詳細頁]
     
-    G -->|返回| B
-    G -->|點擊「編輯食譜」| H[填寫編輯表單頁面]
-    H -->|送出表單| F
-    G -->|點擊「刪除食譜」| I[確認並刪除]
-    I -->|刪除成功| B
+    C -->|點擊特定食譜| G[食譜詳細頁]
+    
+    G --> H{操作食譜}
+    H -->|新增筆記/編輯內容| I[進入編輯表單]
+    I -->|儲存變更| G
+    H -->|刪除食譜| J[彈出確認視窗並刪除]
+    J --> B
+    
+    C -->|新增食譜| K{選擇新增方式}
+    K -->|手動建立| L[手動填寫食譜表單]
+    K -->|網址匯入| M[貼上網頁網址解析]
+    
+    L -->|送出儲存| G
+    M -->|預填表單並確認| L
 ```
 
 ## 2. 系統序列圖（Sequence Diagram）
 
-以下序列圖以核心功能**「新增食譜」**為例，展示從使用者介面送出資料到成功寫入資料庫並重導向的完整過程：
+以下以「**使用者新增食譜**」這個核心情境為例，描述從前端送出表單到後端存入 SQLite 資料庫的完整資料流。
 
 ```mermaid
 sequenceDiagram
     actor User as 使用者
-    participant Browser as 瀏覽器 (模板渲染)
-    participant Flask Route as 路由 (Controller)
-    participant Model as 邏輯模型 (Model)
-    participant DB as SQLite 資料庫
-
-    User->>Browser: 在表單頁面填妥食譜資訊並點擊送出
-    Browser->>Flask Route: 發送 POST /recipes 請求 (攜帶表單資料)
+    participant Browser as 瀏覽器
+    participant Route as Flask Route (Controller)
+    participant Model as Recipe Model (Model)
+    participant DB as SQLite (Database)
     
-    Note over Flask Route, DB: 開始處理新增邏輯
-    
-    Flask Route->>Model: 呼叫 Recipe.create(data) 傳入解析後的資料
-    Model->>DB: 執行 SQL INSERT INTO recipes ... 
-    DB-->>Model: 回傳寫入成功訊息
-    Model-->>Flask Route: 回傳新建立的 Recipe 物件
-    
-    Note over Flask Route, Browser: 處理畫面重導向
-    
-    Flask Route-->>Browser: 回傳 302 Redirect 至首頁 (食譜列表)
-    Browser->>Flask Route: 發送 GET / 請求
-    Flask Route->>Model: 取得最新所有食譜列表
-    Model->>DB: 執行 SELECT * FROM recipes
-    DB-->>Model: 回傳新列資料
-    Model-->>Flask Route: 列表資料
-    Flask Route-->>Browser: 使用最新資料重新渲染 index.html (首頁)
+    User->>Browser: 填寫新增食譜表單並點擊「儲存」
+    Browser->>Route: POST /recipes/create (包含表單資料)
+    Route->>Route: 驗證必填欄位 (名稱、食材等)
+    Route->>Model: 呼叫建立食譜方法 (Create Recipe Object)
+    Model->>DB: 執行 INSERT INTO SQL 語句
+    DB-->>Model: 寫入完成，回傳成功狀態
+    Model-->>Route: 回傳新建立的食譜 ID
+    Route-->>Browser: HTTP 302 重新導向至 /recipes/{id} (詳細頁)
+    Browser->>User: 頁面跳轉並顯示剛新增的食譜內容
 ```
 
 ## 3. 功能清單對照表
 
-對應上述流程與 PRD 需求，以下為系統功能對應的 URL 路徑與 HTTP 方法整理，提供後續 API/路由設計的參考：
+在接下來的開發中，我們將需要實作以下路由（Routes）以對應上述的流程圖操作：
 
-| 功能項目說明 | HTTP 方法 | 預計對應的 URL 路徑 | View (Jinja2) | 備註 |
-| --- | :---: | --- | --- | --- |
-| **首頁 / 所有食譜總覽** | `GET` | `/` 或 `/recipes` | `index.html` | 可結合查詢參數 `?q=關鍵字` 處理搜尋與食材推薦功能。 |
-| **進入新增食譜表單頁** | `GET` | `/recipes/new` | `form.html` | 呈現空白的輸入表單。 |
-| **提交新增食譜資料** | `POST` | `/recipes` | *(處理無畫面)* | 處理完後 302 重導向回首頁。 |
-| **查看單一食譜明細** | `GET` | `/recipes/<id>` | `show.html` | 顯示特定 ID 的食譜完整步驟與內容。 |
-| **進入編輯食譜表單頁** | `GET` | `/recipes/<id>/edit` | `form.html` | 呈現帶有原始資料的編輯表單。 |
-| **提交更新的食譜資料** | `POST` | `/recipes/<id>/update` | *(處理無畫面)* | 使用 HTML form 故用 POST，更新完成後重導回明細頁。 |
-| **確定刪除食譜** | `POST` | `/recipes/<id>/delete` | *(處理無畫面)* | 使用 form 觸發 POST，刪除完成後重導回首頁。 |
+| 功能名稱 | URL 路徑 | HTTP 方法 | 說明 |
+| :--- | :--- | :--- | :--- |
+| **瀏覽食譜列表 (首頁)** | `/` 或 `/recipes` | `GET` | 顯示所有食譜，支援分類或關鍵字搜尋的 Query String |
+| **新增食譜 (顯示表單)** | `/recipes/create` | `GET` | 顯示手動新增食譜的 HTML 表單 |
+| **新增食譜 (送出資料)** | `/recipes/create` | `POST` | 接收表單資料並寫入資料庫 |
+| **網址快速匯入預覽** | `/recipes/import` | `POST` | 接收外部網址，後端嘗試解析並回傳至建立表單 |
+| **查看食譜詳細內容** | `/recipes/<id>` | `GET` | 根據 ID 查詢資料庫並顯示單一食譜內容與筆記 |
+| **編輯食譜與筆記 (表單)**| `/recipes/<id>/edit` | `GET` | 顯示包含既有資料的編輯表單 |
+| **編輯食譜與筆記 (儲存)**| `/recipes/<id>/edit` | `POST` | 接收更新資料並複寫資料庫內容 |
+| **刪除食譜** | `/recipes/<id>/delete` | `POST` | 從資料庫中刪除指定 ID 的食譜，為防 CSRF 建議用 POST |
+| **隨機推薦食譜** | `/recipes/random` | `GET` | 從資料庫中隨機撈取一筆食譜並重導向至其詳細頁面 |
+| **管理分類標籤** | `/categories` | `GET` / `POST` | 查看與新增自訂的分類標籤 |
