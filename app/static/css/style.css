@@ -1,0 +1,94 @@
+/* 食譜收藏系統 - 自訂樣式表 */
+
+/* ===== 全域設定 ===== */
+body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* ===== 導覽列 ===== */
+.navbar-brand {
+    font-size: 1.3rem;
+    letter-spacing: 0.5px;
+}
+
+.navbar-brand i {
+    margin-right: 4px;
+}
+
+/* ===== 卡片樣式 ===== */
+.recipe-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.recipe-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12) !important;
+}
+
+.recipe-card .card-title a:hover {
+    color: #0d6efd !important;
+}
+
+.recipe-card .card-img-top {
+    border-bottom: 1px solid #eee;
+}
+
+/* ===== 表單樣式 ===== */
+.form-control:focus,
+.form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+textarea.form-control {
+    resize: vertical;
+}
+
+/* ===== Badge 樣式 ===== */
+.badge {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+/* ===== 空狀態 ===== */
+#empty-state {
+    padding: 3rem 1rem;
+}
+
+#empty-state i {
+    opacity: 0.4;
+}
+
+/* ===== 頁尾 ===== */
+footer {
+    margin-top: auto;
+}
+
+/* ===== 搜尋結果提示 ===== */
+#search-result-info {
+    background-color: #fff9e6;
+    border-color: #ffc107 !important;
+}
+
+/* ===== RWD 微調 ===== */
+@media (max-width: 576px) {
+    .recipe-card .card-img-top,
+    .recipe-card .bg-light {
+        height: 160px !important;
+    }
+
+    h1.h3 {
+        font-size: 1.25rem;
+    }
+}

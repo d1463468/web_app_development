@@ -1,4 +1,128 @@
 {% extends 'base.html' %}
+
+{% block title %}
+    {% if recipe and recipe.id is defined and recipe.id %}
+        編輯食譜 — 食譜收藏系統
+    {% else %}
+        新增食譜 — 食譜收藏系統
+    {% endif %}
+{% endblock %}
+
 {% block content %}
-<!-- 食譜新增與編輯共用表單 -->
+
+<!-- 返回列表 -->
+<nav class="mb-3">
+    <a href="{{ url_for('recipes.index') }}" class="text-decoration-none" id="link-back-to-list">
+        <i class="bi bi-arrow-left"></i> 返回食譜列表
+    </a>
+</nav>
+
+<!-- 表單標題 -->
+<h1 class="h3 mb-4">
+    {% if recipe and recipe.id is defined and recipe.id %}
+        <i class="bi bi-pencil-square"></i> 編輯食譜
+    {% else %}
+        <i class="bi bi-plus-circle"></i> 新增食譜
+    {% endif %}
+</h1>
+
+<!-- 食譜表單 -->
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="POST" id="recipe-form"
+              action="{% if recipe and recipe.id is defined and recipe.id %}{{ url_for('recipes.update', recipe_id=recipe.id) }}{% else %}{{ url_for('recipes.create') }}{% endif %}">
+
+            <!-- 食譜名稱（必填） -->
+            <div class="mb-3">
+                <label for="input-title" class="form-label fw-bold">
+                    食譜名稱 <span class="text-danger">*</span>
+                </label>
+                <input type="text" class="form-control" id="input-title" name="title"
+                       placeholder="例如：番茄炒蛋、紅燒牛腩..."
+                       value="{{ recipe.title if recipe and recipe.title else '' }}" required>
+                <div class="form-text">必填欄位，請輸入食譜名稱。</div>
+            </div>
+
+            <!-- 分類選擇 -->
+            <div class="mb-3">
+                <label for="select-category" class="form-label fw-bold">食譜分類</label>
+                <select class="form-select" id="select-category" name="category_id">
+                    <option value="">— 未分類 —</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.id }}"
+                            {% if recipe and recipe.category_id is defined and recipe.category_id|string == cat.id|string %}
+                                selected
+                            {% endif %}>
+                            {{ cat.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 食材清單 -->
+            <div class="mb-3">
+                <label for="input-ingredients" class="form-label fw-bold">
+                    <i class="bi bi-basket2"></i> 食材清單
+                </label>
+                <textarea class="form-control" id="input-ingredients" name="ingredients"
+                          rows="4" placeholder="例如：&#10;番茄 2 顆&#10;雞蛋 3 顆&#10;蔥花 適量">{{ recipe.ingredients if recipe and recipe.ingredients else '' }}</textarea>
+                <div class="form-text">每行填寫一種食材，方便閱讀。</div>
+            </div>
+
+            <!-- 料理步驟 -->
+            <div class="mb-3">
+                <label for="input-instructions" class="form-label fw-bold">
+                    <i class="bi bi-list-ol"></i> 料理步驟
+                </label>
+                <textarea class="form-control" id="input-instructions" name="instructions"
+                          rows="6" placeholder="例如：&#10;1. 將雞蛋打散備用&#10;2. 番茄切塊&#10;3. 熱鍋加油，先炒蛋再加番茄">{{ recipe.instructions if recipe and recipe.instructions else '' }}</textarea>
+            </div>
+
+            <!-- 圖片路徑 -->
+            <div class="mb-3">
+                <label for="input-image-url" class="form-label fw-bold">
+                    <i class="bi bi-image"></i> 圖片路徑 / URL
+                </label>
+                <input type="text" class="form-control" id="input-image-url" name="image_url"
+                       placeholder="例如：https://example.com/photo.jpg"
+                       value="{{ recipe.image_url if recipe and recipe.image_url else '' }}">
+            </div>
+
+            <!-- 來源網址 -->
+            <div class="mb-3">
+                <label for="input-source-url" class="form-label fw-bold">
+                    <i class="bi bi-link-45deg"></i> 來源網址
+                </label>
+                <input type="url" class="form-control" id="input-source-url" name="source_url"
+                       placeholder="例如：https://icook.tw/recipes/12345"
+                       value="{{ recipe.source_url if recipe and recipe.source_url else '' }}">
+            </div>
+
+            <!-- 個人筆記 -->
+            <div class="mb-4">
+                <label for="input-notes" class="form-label fw-bold">
+                    <i class="bi bi-sticky"></i> 個人筆記
+                </label>
+                <textarea class="form-control" id="input-notes" name="notes"
+                          rows="3" placeholder="紀錄你的試做心得、調整建議...">{{ recipe.notes if recipe and recipe.notes else '' }}</textarea>
+            </div>
+
+            <!-- 送出按鈕 -->
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-lg" id="btn-submit-recipe">
+                    {% if recipe and recipe.id is defined and recipe.id %}
+                        <i class="bi bi-check-lg"></i> 儲存變更
+                    {% else %}
+                        <i class="bi bi-plus-lg"></i> 建立食譜
+                    {% endif %}
+                </button>
+                <a href="{{ url_for('recipes.index') }}" class="btn btn-outline-secondary btn-lg" id="btn-cancel">
+                    取消
+                </a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
 {% endblock %}
